@@ -1,0 +1,115 @@
+/* Role tokens per theme. Project palette is defined per theme and verified by
+   automated contrast + colour-vision tests (tests/design/tokens.test.ts). */
+
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f2ee;
+  --surface: #fbfaf8;
+  --surface-2: #eceae4;
+  --ink: #1f2328;
+  --ink-muted: #55595e;
+  --ink-faint: #8a8e93;
+  --line: #d8d5ce;
+  --focus-ring: #2456a8;
+  --ok: #2e6e46;
+  --warn: #8a6116;
+  --danger: #a13333;
+  --chart-ramp-1: #eceae4;
+  --chart-ramp-2: #c9cbc4;
+  --chart-ramp-3: #9aa39b;
+  --chart-ramp-4: #66756a;
+  --chart-ramp-5: #35493d;
+  --project-1: #265aba;
+  --project-2: #41989b;
+  --project-3: #876200;
+  --project-4: #d8692c;
+  --project-5: #7062ad;
+  --project-6: #8b1768;
+  --project-7: #6c8e44;
+  --project-8: #445160;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17181b;
+  --surface: #202226;
+  --surface-2: #2a2d32;
+  --ink: #e8e6e1;
+  --ink-muted: #a9aca9;
+  --ink-faint: #75787a;
+  --line: #3a3d42;
+  --focus-ring: #9cc0ff;
+  --ok: #7fc79b;
+  --warn: #ddb264;
+  --danger: #e08a8a;
+  --chart-ramp-1: #2a2d32;
+  --chart-ramp-2: #454a50;
+  --chart-ramp-3: #63696f;
+  --chart-ramp-4: #878d92;
+  --chart-ramp-5: #b9bec1;
+  --project-1: #4d78b7;
+  --project-2: #7dd5d7;
+  --project-3: #bf9d3c;
+  --project-4: #ffc18f;
+  --project-5: #efdeff;
+  --project-6: #b6669d;
+  --project-7: #a7c67c;
+  --project-8: #9aa7b4;
+}
+
+/* Dim: warm, low-stimulation, for long focus sessions. */
+:root[data-theme="dim"] {
+  color-scheme: dark;
+  --bg: #211f1c;
+  --surface: #292623;
+  --surface-2: #332f2b;
+  --ink: #ddd5c9;
+  --ink-muted: #a89f92;
+  --ink-faint: #7d7568;
+  --line: #403b35;
+  --focus-ring: #cdb289;
+  --ok: #a8bd90;
+  --warn: #cfb37a;
+  --danger: #cf9490;
+  --chart-ramp-1: #332f2b;
+  --chart-ramp-2: #4c4741;
+  --chart-ramp-3: #6a6259;
+  --chart-ramp-4: #8b8175;
+  --chart-ramp-5: #b0a595;
+  --project-1: #778caf;
+  --project-2: #a3d6cf;
+  --project-3: #b79e5f;
+  --project-4: #ffd4b1;
+  --project-5: #b1a5cd;
+  --project-6: #ae7d95;
+  --project-7: #b5c79b;
+  --project-8: #676e73;
+}
+
+:root[data-theme="highContrast"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #161616;
+  --ink: #ffffff;
+  --ink-muted: #d4d4d4;
+  --ink-faint: #9e9e9e;
+  --line: #5a5a5a;
+  --focus-ring: #ffd23e;
+  --ok: #59d68c;
+  --warn: #ffd23e;
+  --danger: #ff7a7a;
+  --chart-ramp-1: #161616;
+  --chart-ramp-2: #3d3d3d;
+  --chart-ramp-3: #6a6a6a;
+  --chart-ramp-4: #9c9c9c;
+  --chart-ramp-5: #d6d6d6;
+  --project-1: #678dc6;
+  --project-2: #76efef;
+  --project-3: #d4ac05;
+  --project-4: #ffd79c;
+  --project-5: #faefff;
+  --project-6: #de84b2;
+  --project-7: #bbec88;
+  --project-8: #bec7d2;
+}
