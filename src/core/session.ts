@@ -311,6 +311,16 @@ export class SessionEngine {
     this.emitChange();
   }
 
+  /** Swaps the project/task a running or paused session points at, keeping elapsed time intact. */
+  setRef(ref: SessionRef): void {
+    const s = this.snap;
+    if (s.status !== "running" && s.status !== "paused" && s.status !== "awaiting") {
+      throw new Error(`Cannot change project from status "${s.status}"`);
+    }
+    s.ref = { ...ref };
+    this.emitChange();
+  }
+
   skipPhase(): void {
     const s = this.snap;
     if (s.status !== "running" && s.status !== "paused") throw new Error(`Cannot skip from status "${s.status}"`);
