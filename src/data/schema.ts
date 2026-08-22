@@ -89,6 +89,7 @@ export interface Settings {
   };
   daySpanStartMinute: number;
   daySpanEndMinute: number;
+  onboarded: boolean;
 }
 
 export interface AuditLogEvent {
@@ -129,6 +130,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   daySpanStartMinute: 7 * 60,
   daySpanEndMinute: 22 * 60,
+  onboarded: false,
 };
 
 export function emptyDatabase(nowWall: number): Database {

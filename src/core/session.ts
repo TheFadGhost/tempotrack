@@ -267,6 +267,50 @@ export class SessionEngine {
     this.emitChange();
   }
 
+  /**
+   * Resolves an idle-detected stretch that happened while running.
+   * `keep`: count the whole stretch. `discard`: remove idleMs from the
+   * segment. `stop`: finalize the shortened segment and go idle.
+   */
+  resolveIdleStretch(idleMs: number, action: "keep" | "discard" | "stop"): FinalizedSegment | null {
+    const s = this.snap;
+    if (s.status !== "running") throw new Error(`Cannot resolve idle from status "${s.status}"`);
+    let seg: FinalizedSegment | null = null;
+    const st = this.publicState();
+    if (action === "keep") {
+      // Nothing changes; stamps stay valid because wall kept advancing with mono.
+      void st;
+      return null;
+    }
+    const shortened = Math.max(0, st.elapsedMs - Math.max(0, idleMs));
+    s.accumulatedMs = shortened;
+    if (action === "stop") {
+      seg = this.buildSegment(shortened);
+      this.hooks.onSegmentFinished?.(seg);
+      this.resetToIdlePreservingCycles();
+    } else {
+      this.stampNewSegment();
+    }
+    s.status = s.status === "running" ? "running" : s.status;
+    this.emitChange();
+    return seg;
+  }
+
+  /** Continues running on a new ref from now, logging prior time minus the idle stretch. */
+  reassignAfterIdle(ref: SessionRef, idleMs: number): void {
+    const s = this.snap;
+    if (s.status !== "running") throw new Error(`Cannot reassign from status "${s.status}"`);
+    const st = this.publicState();
+    const shortened = Math.max(0, st.elapsedMs - Math.max(0, idleMs));
+    s.accumulatedMs = shortened;
+    this.deliverSegment(shortened);
+    s.accumulatedMs = 0;
+    s.firstSegmentStartedWallMs = this.clock.wallMs();
+    s.ref = { ...ref };
+    this.stampNewSegment();
+    this.emitChange();
+  }
+
   skipPhase(): void {
     const s = this.snap;
     if (s.status !== "running" && s.status !== "paused") throw new Error(`Cannot skip from status "${s.status}"`);

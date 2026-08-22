@@ -40,7 +40,8 @@ export function simulateDeuteranopia(hex: string): Rgb {
   return { r: toSrgb(sim.rl), g: toSrgb(sim.gl), b: toSrgb(sim.bl) };
 }
 
-function toLab({ r, g, b }: Rgb): [number, number, number] {
+function toLab(hex: string): [number, number, number] {
+  const { r, g, b } = hexToRgb(hex);
   const lin = [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)];
   const X = 0.4124 * lin[0]! + 0.3576 * lin[1]! + 0.1805 * lin[2]!;
   const Y = 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
@@ -57,9 +58,19 @@ export function deltaE(aHex: string, bHex: string): number {
 }
 
 function deltaEDeutan(aHex: string, bHex: string): number {
-  const a = toLab(simulateDeuteranopia(aHex));
-  const b = toLab(simulateDeuteranopia(bHex));
+  const a = toLabDeutan(simulateDeuteranopia(aHex));
+  const b = toLabDeutan(simulateDeuteranopia(bHex));
   return Math.sqrt((a[0]! - b[0]!) ** 2 + (a[1]! - b[1]!) ** 2 + (a[2]! - b[2]!) ** 2);
+}
+
+function toLabDeutan({ r, g, b }: Rgb): [number, number, number] {
+  const lin = [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)];
+  const X = 0.4124 * lin[0]! + 0.3576 * lin[1]! + 0.1805 * lin[2]!;
+  const Y = 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+  const Z = 0.0193 * lin[0]! + 0.1192 * lin[1]! + 0.9505 * lin[2]!;
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const [fx, fy, fz] = [f(X / 0.95047), f(Y / 1.0), f(Z / 1.08883)];
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
 const TOKENS_CSS = readFileSync(new URL("../../src/styles/tokens.css", import.meta.url), "utf8");
