@@ -1,7 +1,7 @@
 import { h } from "../dom.js";
 import type { UiContext } from "../main.js";
 import type { Settings } from "../../data/schema.js";
-import { buildSampleDatabase } from "../../../scripts/generate-sample-data.mjs";
+import { buildSampleDatabase } from "../../data/sample.js";
 
 export function renderSettings(ui: UiContext): void {
   const { app, main } = ui;
