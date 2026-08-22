@@ -173,6 +173,8 @@ export function createProject(
     colorIndex: opts.colorIndex ?? db.projects.length % 8,
     billableByDefault: opts.billableByDefault ?? false,
     rateMinorPerHour: opts.rateMinorPerHour ?? null,
+    goalTargetMs: null,
+    goalPeriod: null,
     archived: false,
     createdAt: nowWall,
   };

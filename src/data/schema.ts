@@ -16,6 +16,9 @@ export interface Project {
   colorIndex: number;
   billableByDefault: boolean;
   rateMinorPerHour: number | null;
+  /** Optional goal: target tracked time per period. */
+  goalTargetMs: number | null;
+  goalPeriod: "day" | "week" | null;
   archived: boolean;
   createdAt: number;
 }

@@ -7,7 +7,7 @@ const NOW = 1_700_000_000_000;
 
 function seededDb(): ReturnType<typeof emptyDatabase> {
   const db = emptyDatabase(NOW);
-  db.projects.push({ id: "p1", name: "Aster Labs", parentId: null, colorIndex: 0, billableByDefault: true, rateMinorPerHour: 12_000, archived: false, createdAt: NOW });
+  db.projects.push({ id: "p1", name: "Aster Labs", parentId: null, colorIndex: 0, billableByDefault: true, rateMinorPerHour: 12_000, goalTargetMs: null, goalPeriod: null, archived: false, createdAt: NOW });
   db.entries.push({
     id: "e1", projectId: "p1", taskId: null, tagIds: [], billable: true,
     startedWall: NOW, durationMs: 3_600_000, note: "", source: "timer",
