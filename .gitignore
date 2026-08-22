@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.local
+.DS_Store
+
+# Local user data produced by the app (never commit real time data)
+*.tempotrack.json
+backups/
