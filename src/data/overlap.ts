@@ -83,33 +83,24 @@ export function findGaps(
     .sort((a, b) => a.startWall - b.startWall);
 
   const gaps: Gap[] = [];
-  let cursor = Math.max(windowStart, 0);
-  cursor = windowStart;
+  let cursor = windowStart;
   for (const span of spans) {
     const s = Math.max(span.startWall, windowStart);
     const e = Math.min(span.endWall, windowEnd);
     if (s > cursor) {
-      pushGap(gaps, cursor, s, minGapMs, range, dismissed);
+      pushGap(gaps, cursor, s, minGapMs, dismissed);
     }
     cursor = Math.max(cursor, e);
   }
   if (windowEnd > cursor) {
-    pushGap(gaps, cursor, windowEnd, minGapMs, range, dismissed);
+    pushGap(gaps, cursor, windowEnd, minGapMs, dismissed);
   }
   return gaps;
 }
 
-function pushGap(
-  gaps: Gap[],
-  startWall: number,
-  endWall: number,
-  minGapMs: number,
-  range: DayRange,
-  dismissed: Set<string>,
-): void {
+function pushGap(gaps: Gap[], startWall: number, endWall: number, minGapMs: number, dismissed: Set<string>): void {
   const durationMs = endWall - startWall;
   if (durationMs < minGapMs) return;
   if (dismissed.has(`${startWall}:${endWall}`)) return;
-  void range;
   gaps.push({ startWall, endWall, durationMs });
 }

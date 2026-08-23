@@ -160,4 +160,17 @@ describe("SessionEngine timing correctness", () => {
     expect(seg!.durationMs).toBe(40 * 60_000);
     expect(seg!.observedEndWallMs - seg!.startedWallMs).toBeGreaterThanOrEqual(seg!.durationMs - 1);
   });
+
+  it("refuses idle resolution while an away-time prompt is pending", () => {
+    const { engine } = makeEngine(clock);
+    engine.start(REF, "stopwatch");
+    clock.advance(60_000);
+    clock.suspend(3_600_000);
+    expect(engine.evaluate().status).toBe("needsReconciliation");
+    expect(() => engine.resolveIdleStretch(30_000, "keep")).toThrow(/away-time/i);
+    // Reconciliation still resolves normally afterwards.
+    engine.resolveReconciliation("discardAbsent");
+    clock.advance(5_000);
+    expect(engine.stop()!.durationMs).toBe(65_000);
+  });
 });

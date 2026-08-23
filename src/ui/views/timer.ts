@@ -161,7 +161,7 @@ function reconcilePanel(ui: UiContext, st: ReturnType<UiContext["app"]["engine"]
   const from = new Date(rec.gapStartedWallMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const to = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const select = projectSelect(ui);
-  return h("div", { class: "resolve-panel", role: "alertdialog", "aria-label": "Away time detected" },
+  return h("div", { class: "resolve-panel", role: "region", "aria-label": "Away time detected" },
     h("strong", null, `The machine was away from ${from} to ${to}.`),
     h("p", { class: "muted" }, `Trusted focus time so far: ${formatHM(rec.trustedElapsedMs)}. The unaccounted span is ${formatHM(rec.absentMs)}; keeping it would count ${formatHM(rec.keepFullMs)} total.`),
     h("div", { class: "actions" },
@@ -185,7 +185,7 @@ function idlePanel(ui: UiContext): HTMLElement {
   const { app } = ui;
   const idle = app.idlePrompt!;
   const select = projectSelect(ui);
-  return h("div", { class: "resolve-panel", role: "alertdialog", "aria-label": "Idle time detected" },
+  return h("div", { class: "resolve-panel", role: "status", "aria-label": "Idle time detected" },
     h("strong", null, `No activity for ${formatHM(idle.idleMs)} while the timer ran.`),
     h("p", { class: "muted" }, "Only input inside Tempotrack is observed — nothing about other applications."),
     h("div", { class: "actions" },

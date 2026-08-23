@@ -1,6 +1,6 @@
 import { h, clear, projectColor } from "../dom.js";
 import type { UiContext } from "../main.js";
-import { createTask, updateProject, ValidationError, uid } from "../../data/model.js";
+import { createTask, createTag, deleteTag, renameTag, updateProject, ValidationError, uid } from "../../data/model.js";
 
 export function renderProjects(ui: UiContext): void {
   const { app, main } = ui;
@@ -232,23 +232,21 @@ function tagManager(ui: UiContext): HTMLElement {
   for (const tag of app.db.tags) {
     const input = h("input", { type: "text", value: tag.name, "aria-label": `Rename tag ${tag.name}` }) as HTMLInputElement;
     input.addEventListener("change", () => {
-      const trimmed = input.value.trim();
-      if (!trimmed) {
-        app.showError("Tag name cannot be empty.");
+      try {
+        renameTag(app.db, tag.id, input.value, app.now());
+        app.saveSoon();
+        app.emit();
+      } catch (err) {
+        app.showError(err instanceof ValidationError ? err.message : String((err as Error).message));
         input.value = tag.name;
-        return;
       }
-      tag.name = trimmed;
-      app.saveSoon();
-      app.emit();
     });
     list.append(h("div", { class: "row", style: "margin-bottom:6px" },
       input,
       h("button", {
         class: "subtle danger",
         onclick: () => {
-          app.db.tags = app.db.tags.filter((t) => t.id !== tag.id);
-          for (const e of app.db.entries) e.tagIds = e.tagIds.filter((id) => id !== tag.id);
+          deleteTag(app.db, tag.id, app.now());
           app.saveSoon();
           app.emit();
         },
@@ -259,12 +257,13 @@ function tagManager(ui: UiContext): HTMLElement {
   addInput.addEventListener("keydown", (ev) => {
     if (ev.key !== "Enter") return;
     ev.preventDefault();
-    const trimmed = addInput.value.trim();
-    if (!trimmed) return;
-    if (!app.db.tags.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())) {
-      app.db.tags.push({ id: uid(), name: trimmed });
+    try {
+      createTag(app.db, addInput.value);
+      addInput.value = "";
       app.saveSoon();
       app.emit();
+    } catch (err) {
+      app.showError(err instanceof ValidationError ? err.message : String((err as Error).message));
     }
   });
   wrap.append(list, addInput);

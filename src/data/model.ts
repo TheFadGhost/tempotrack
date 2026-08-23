@@ -223,3 +223,30 @@ export function createTag(db: Database, name: string): Database["tags"][number] 
   db.tags.push(tag);
   return tag;
 }
+
+export function renameTag(db: Database, tagId: string, name: string, nowWall: number): void {
+  const trimmed = name.trim();
+  if (!trimmed) throw new ValidationError("Tag name cannot be empty.");
+  const tag = db.tags.find((t) => t.id === tagId);
+  if (!tag) throw new ValidationError("Tag not found.");
+  if (db.tags.some((t) => t.id !== tagId && t.name.toLowerCase() === trimmed.toLowerCase())) {
+    throw new ValidationError(`A tag named "${trimmed}" already exists.`);
+  }
+  const before = tag.name;
+  tag.name = trimmed;
+  db.auditLog.push({ atWall: nowWall, type: "tagRenamed", payload: { tagId, from: before, to: trimmed } });
+}
+
+export function deleteTag(db: Database, tagId: string, nowWall: number): void {
+  const tag = db.tags.find((t) => t.id === tagId);
+  if (!tag) throw new ValidationError("Tag not found.");
+  let touched = 0;
+  for (const e of db.entries) {
+    if (e.tagIds.includes(tagId)) {
+      e.tagIds = e.tagIds.filter((id) => id !== tagId);
+      touched += 1;
+    }
+  }
+  db.tags = db.tags.filter((t) => t.id !== tagId);
+  db.auditLog.push({ atWall: nowWall, type: "tagDeleted", payload: { tagId, name: tag.name, entriesAffected: touched } });
+}

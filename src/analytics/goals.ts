@@ -1,6 +1,5 @@
 import type { Database } from "../data/schema.js";
 import { dayKeyOf, startOfDayWall, startOfWeek, type TzOffsetFn } from "./time.js";
-import { dailyTotals } from "./aggregate.js";
 
 const MS_PER_DAY = 86_400_000;
 
@@ -31,7 +30,6 @@ export function goalProgress(db: Database, nowWall: number, tz: TzOffsetFn): Goa
   const goals = db.projects.filter((p) => !p.archived && p.goalTargetMs !== null && p.goalTargetMs > 0 && p.goalPeriod !== null);
   if (goals.length === 0) return out;
 
-  const totalsByDay = new Map(dailyTotals(db, [today], tz).map((t) => [t.dayKey, t]));
   const perProjectToday = new Map<string, number>();
   for (const e of db.entries) {
     if (dayKeyOf(e.startedWall, tz) !== today) continue;
@@ -78,7 +76,6 @@ export function goalProgress(db: Database, nowWall: number, tz: TzOffsetFn): Goa
       });
     }
   }
-  void totalsByDay;
   return out;
 }
 

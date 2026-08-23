@@ -1,6 +1,6 @@
 import type { Database, Entry } from "../data/schema.js";
 import { formatDecimalHours } from "../core/duration.js";
-import { dayKeyOf, systemTzOffset, type TzOffsetFn } from "../analytics/time.js";
+import { dayKeyOf, type TzOffsetFn } from "../analytics/time.js";
 
 /** RFC 4180: quote fields containing separators, quotes or newlines. */
 export function csvEscape(value: string): string {
@@ -44,7 +44,7 @@ export const ENTRIES_CSV_HEADER = [
   "note",
 ] as const;
 
-export function entriesToCsv(db: Database, entries: Entry[], tz: TzOffsetFn = systemTzOffset): string {
+export function entriesToCsv(db: Database, entries: Entry[], tz: TzOffsetFn): string {
   const sorted = [...entries].sort((a, b) => a.startedWall - b.startedWall);
   const rows = sorted.map((e) => {
     const stamp = localStamp(e.startedWall, tz);
@@ -76,7 +76,7 @@ export function assertTotalsMatch(entries: Entry[], rowsHoursDecimal: string[]):
   }
 }
 
-export function dayKeysCovered(entries: Entry[], tz: TzOffsetFn = systemTzOffset): string[] {
+export function dayKeysCovered(entries: Entry[], tz: TzOffsetFn): string[] {
   const keys = new Set(entries.map((e) => dayKeyOf(e.startedWall, tz)));
   return [...keys].sort();
 }
