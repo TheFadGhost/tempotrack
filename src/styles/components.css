@@ -54,7 +54,7 @@
 .timeline .entry-block {
   position: absolute; left: 8px; right: 8px; border-radius: 4px;
   padding: 2px 6px; overflow: hidden; cursor: default;
-  color: #fff; font-size: 12px; line-height: 1.3;
+  font-size: 12px; line-height: 1.3;
 }
 .timeline .gap-block { position: absolute; left: 8px; right: 8px; }
 
@@ -75,7 +75,9 @@
 /* Analytics */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); }
 .heatmap { display: grid; grid-template-columns: 34px repeat(24, 1fr); gap: 2px; font-size: 11px; }
-.heatmap .hm-label { color: var(--ink-faint); align-self: center; }
+.heatmap .hm-label { color: var(--ink-muted); align-self: center; }
+.heatmap [role="row"] { display: contents; }
+.heatmap .hm-zero { border-style: dashed; }
 .heatmap .hm-cell { aspect-ratio: 1.6; border: 1px solid var(--line); border-radius: 2px; background: transparent; }
 .bar-chart .bar-row { display: grid; grid-template-columns: 130px 1fr 70px; gap: var(--space-3); align-items: center; margin-bottom: var(--space-2); }
 .bar-chart .bar { height: 14px; border-radius: 3px; background: var(--project-1); min-width: 1px; }

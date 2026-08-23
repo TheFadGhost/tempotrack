@@ -1,6 +1,7 @@
 import type { Database, Entry } from "../data/schema.js";
 import { billableLines } from "../analytics/billing.js";
 import { formatDecimalHours } from "../core/duration.js";
+import { roundDiv } from "../core/duration.js";
 import { formatMinor } from "../core/money.js";
 import { projectPath } from "./csv.js";
 

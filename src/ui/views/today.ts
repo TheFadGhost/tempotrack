@@ -3,6 +3,7 @@ import type { UiContext } from "../main.js";
 import { renderTimerCard } from "./timer.js";
 import { dayDetail } from "./daydetail.js";
 import { formatHM } from "../../core/duration.js";
+import { coveredUnionMs } from "../../analytics/aggregate.js";
 
 export function renderToday(ui: UiContext): void {
   const { app, main } = ui;
@@ -23,6 +24,15 @@ export function renderToday(ui: UiContext): void {
       h("span", { class: "muted" }, "Focused"),
       h("span", { class: "big-total num" }, formatHM(total)),
     ),
+    ...(() => {
+      const dayStart = app.startDayWall(dayKey);
+      const entries = app.db.entries.filter((e) => e.startedWall >= dayStart && e.startedWall < dayStart + 86_400_000);
+      const gross = entries.reduce((s, e) => s + e.durationMs, 0);
+      const net = coveredUnionMs(entries);
+      return net < gross
+        ? [h("p", { class: "muted num", style: "margin-top:-8px" }, `Contains overlapping entries · net covered time ${formatHM(net)} of ${formatHM(gross)}`)]
+        : [];
+    })(),
     ...(() => { const onb = onboardingIfNeeded(ui); return onb ? [onb] : []; })(),
     renderTimerCard(ui),
     dayDetail(ui, app.startDayWall(dayKey)),

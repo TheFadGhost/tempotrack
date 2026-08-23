@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { paletteForTheme, readableInkOn } from "../../src/ui/color.js";
 
 interface Rgb { r: number; g: number; b: number }
 
@@ -114,6 +115,19 @@ describe("theme tokens meet accessibility thresholds", () => {
       const bg = token(theme, "bg");
       for (let i = 1; i <= 8; i++) {
         expect(contrast(token(theme, `project-${i}`), bg)).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    it(`${theme}: block labels on project colours reach AA via readable ink pick`, () => {
+      const palette = paletteForTheme(theme);
+      for (let i = 1; i <= 8; i++) {
+        const fill = token(theme, `project-${i}`);
+        expect(fill.toLowerCase()).toBe(palette[i - 1]!.toLowerCase());
+        const ink = readableInkOn(fill);
+        const ratio = contrast(ink, fill);
+        if (ratio < 4.5) {
+          throw new Error(`${theme}: chosen ink vs project-${i} is ${ratio.toFixed(2)}, needs >= 4.5`);
+        }
       }
     });
 

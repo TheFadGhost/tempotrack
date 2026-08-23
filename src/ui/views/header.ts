@@ -1,7 +1,6 @@
 import { h } from "../dom.js";
 import { clockText } from "../app.js";
 import type { UiContext } from "../main.js";
-import { navigate } from "../main.js";
 
 const NAV = [
   ["today", "Today"],
@@ -18,10 +17,14 @@ export function renderHeader(ui: UiContext): void {
       h("a", { href: `#${route}`, "aria-current": app.route === route ? "page" : false }, label),
     ),
   );
+  renderIndicator({ indicator, app });
+}
+
+/** Rebuilds only the indicator's contents so per-second updates never touch main. */
+export function renderIndicator({ indicator, app }: { indicator: HTMLElement; app: UiContext["app"] }): void {
 
   const st = app.engine.publicState();
-  const cls =
-    st.status === "running" && app.mode === "pomodoro" && st.phase !== "work"
+  const cls = st.status === "running" && app.mode === "pomodoro" && st.phase !== "work"
       ? "break"
       : st.status === "running"
         ? "running"
@@ -48,5 +51,4 @@ export function renderHeader(ui: UiContext): void {
     indicator.replaceChildren(h("span", { class: "dot", "aria-hidden": "true" }), h("span", null, "Not running"));
   }
 
-  void navigate;
 }

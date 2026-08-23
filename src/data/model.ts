@@ -2,13 +2,14 @@ import type { AuditSource, Database, Entry, Revision } from "./schema.js";
 
 let counter = 0;
 
+/** Clock-free unique id: counter + entropy only (the data layer never reads time). */
 export function uid(): string {
   counter = (counter + 1) % 1_000_000;
   const rnd =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID().slice(0, 8)
       : Math.floor(Math.random() * 0xffffffff).toString(16);
-  return `${Date.now().toString(36)}-${counter.toString(36)}-${rnd}`;
+  return `id-${counter.toString(36)}-${rnd}`;
 }
 
 export class ValidationError extends Error {}
@@ -108,21 +109,25 @@ export function editEntry(
 ): Entry {
   const entry = db.entries.find((e) => e.id === entryId);
   if (!entry) throw new ValidationError("Entry not found.");
-  const next = { ...entry, ...changes };
-  if (next.durationMs !== undefined) {
-    if (!Number.isSafeInteger(next.durationMs) || next.durationMs <= 0) {
-      throw new ValidationError("Duration must be greater than zero.");
-    }
-  }
-  if (changes.projectId && !db.projects.some((p) => p.id === changes.projectId)) {
-    throw new ValidationError("Unknown project.");
-  }
+  const merged = { ...entry, ...changes };
+  validateManualEntry(
+    db,
+    {
+      projectId: merged.projectId,
+      taskId: merged.taskId,
+      tagIds: merged.tagIds,
+      billable: merged.billable,
+      startedWall: merged.startedWall,
+      durationMs: merged.durationMs,
+      note: merged.note,
+    },
+    nowWall,
+  );
   recordRevision(entry, changes, nowWall, source);
-  void next;
   return entry;
 }
 
-export function splitEntry(db: Database, entryId: string, splitAtWall: number, nowWall: number): [Entry, Entry] {
+export function splitEntry(db: Database, entryId: string, splitAtWall: number, nowWall: number, source: AuditSource = "user"): [Entry, Entry] {
   const entry = db.entries.find((e) => e.id === entryId);
   if (!entry) throw new ValidationError("Entry not found.");
   const offset = splitAtWall - entry.startedWall;
@@ -134,11 +139,14 @@ export function splitEntry(db: Database, entryId: string, splitAtWall: number, n
     id: uid(),
     startedWall: splitAtWall,
     durationMs: entry.durationMs - offset,
+    // The overlap acknowledgements covered the original span only; each half
+    // must earn its own acknowledgement.
+    acknowledgedOverlapsWith: [],
     revisions: [],
     createdAt: nowWall,
     editedAt: null,
   };
-  recordRevision(entry, { durationMs: offset }, nowWall, "user");
+  recordRevision(entry, { durationMs: offset }, nowWall, source);
   const index = db.entries.findIndex((e) => e.id === entryId);
   db.entries.splice(index + 1, 0, second);
   return [entry, second];

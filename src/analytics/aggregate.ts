@@ -38,6 +38,33 @@ export function entriesOfDays(db: Database, dayKeys: string[], tz: TzOffsetFn): 
   return db.entries.filter((e) => keys.has(dayKeyOf(e.startedWall, tz)));
 }
 
+/**
+ * Union of all entry intervals in wall-clock ms — the time actually covered by
+ * at least one entry. Used to report honest net values next to gross totals
+ * whenever entries overlap.
+ */
+export function coveredUnionMs(entries: Entry[]): number {
+  if (entries.length === 0) return 0;
+  const spans = entries
+    .map((e) => ({ start: e.startedWall, end: e.startedWall + e.durationMs }))
+    .sort((a, b) => a.start - b.start);
+  let total = 0;
+  let cursorStart = spans[0]!.start;
+  let cursorEnd = spans[0]!.end;
+  for (let i = 1; i < spans.length; i++) {
+    const s = spans[i]!;
+    if (s.start > cursorEnd) {
+      total += cursorEnd - cursorStart;
+      cursorStart = s.start;
+      cursorEnd = s.end;
+    } else if (s.end > cursorEnd) {
+      cursorEnd = s.end;
+    }
+  }
+  total += cursorEnd - cursorStart;
+  return total;
+}
+
 export function dailyTotals(db: Database, dayKeys: string[], tz: TzOffsetFn): DayTotals[] {
   const byDay = new Map<string, DayTotals>(dayKeys.map((k) => [k, { dayKey: k, focusedMs: 0, billableFocusedMs: 0 }]));
   for (const e of db.entries) {

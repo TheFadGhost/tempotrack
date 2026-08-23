@@ -1,10 +1,11 @@
-import { systemClock } from "../core/clock.js";
+import { systemClock, type Clock } from "../core/clock.js";
 import { SessionEngine, type FinalizedSegment, type PublicTimerState, type SessionRef, type TimerMode } from "../core/session.js";
 import { DataStore, LocalStoragePersistence, freshDatabase } from "../data/store.js";
-import { addTimerEntry, createProject as modelCreateProject, uid } from "../data/model.js";
+import { addTimerEntry, createProject as modelCreateProject, deleteEntry as modelDeleteEntry, uid } from "../data/model.js";
 import type { Database, Entry, PomodoroEventType } from "../data/schema.js";
 import { IdleMonitor } from "../data/idle.js";
 import { formatHM } from "../core/duration.js";
+import { dayKeyOf as dayKeyOfWall, startOfDayWall as dayStartOfKey, systemTzOffset } from "../analytics/time.js";
 
 export interface IdlePrompt {
   kind: "idle";
@@ -27,6 +28,7 @@ export class App {
   idlePrompt: IdlePrompt | null = null;
   private saveTimer: number | null = null;
   private listeners = new Set<() => void>();
+  private tickListeners = new Set<() => void>();
   private lastAnnouncedStatus = "";
 
   constructor() {
@@ -71,21 +73,26 @@ export class App {
     for (const fn of this.listeners) fn();
   }
 
-  dayKeyOf(wallMs: number): string {
-    const off = -new Date(wallMs).getTimezoneOffset();
-    return new Date(wallMs + off * 60_000).toISOString().slice(0, 10);
+  /** Registered by the UI to patch live numbers in place (no DOM rebuild). */
+  onTick(fn: () => void): () => void {
+    this.tickListeners.add(fn);
+    return () => this.tickListeners.delete(fn);
   }
 
-  startDayWall(dayKey: string): number {
-    const utcGuess = Date.parse(`${dayKey}T00:00:00Z`);
-    const off1 = -new Date(utcGuess).getTimezoneOffset();
-    const guess2 = utcGuess - off1 * 60_000;
-    const off2 = -new Date(guess2).getTimezoneOffset();
-    return utcGuess - off2 * 60_000;
+  private emitTick(): void {
+    for (const fn of this.tickListeners) fn();
   }
 
   now(): number {
     return systemClock.wallMs();
+  }
+
+  dayKeyOf(wallMs: number): string {
+    return dayKeyOfWall(wallMs, systemTzOffset);
+  }
+
+  startDayWall(dayKey: string): number {
+    return dayStartOfKey(dayKey, systemTzOffset);
   }
 
   createProject(
@@ -305,23 +312,66 @@ export class App {
   }
 
   tick(): void {
-    const before = this.engine.publicState().status;
+    const beforeStatus = this.engine.publicState().status;
+    const beforeIdle = this.idlePrompt !== null;
     const after = this.engine.evaluate();
-    if (before === "running" && after.status === "running") {
-      const elapsed = after.elapsedMs;
+    const afterStatus = after.status;
+    if (afterStatus === "running") {
       const title =
         this.mode === "pomodoro"
           ? `${clockText(after.remainingMs)} ${this.projectName(after.ref?.projectId ?? "")} — Tempotrack`
-          : `${clockText(elapsed)} ${this.projectName(after.ref?.projectId ?? "")} — Tempotrack`;
+          : `${clockText(after.elapsedMs)} ${this.projectName(after.ref?.projectId ?? "")} — Tempotrack`;
       document.title = title;
-    } else if (after.status !== "running") {
+    } else if (document.title !== "Tempotrack") {
       document.title = "Tempotrack";
     }
-    const prompt = this.idle.check(after.status === "running");
+    if (afterStatus === "needsReconciliation") {
+      // The away-time decision owns the contested span; a stale idle prompt
+      // for the same stretch must not linger and over-subtract later.
+      this.idlePrompt = null;
+    }
+    const prompt = this.idle.check(afterStatus === "running");
     if (prompt && !this.idlePrompt) {
       this.idlePrompt = { kind: "idle", idleMs: prompt.idleMs };
-      this.emit();
     }
+    const structural =
+      beforeStatus !== afterStatus ||
+      (this.idlePrompt !== null) !== beforeIdle ||
+      afterStatus === "needsReconciliation";
+    if (structural) {
+      this.emit();
+      return;
+    }
+    // Numbers-only updates patch the DOM in place; focus and form input survive.
+    this.emitTick();
+  }
+
+  /** Replaces the whole database from a restored file and rebuilds runtime state around it. */
+  restore(db: Database): void {
+    this.db = db;
+    this.db.engineSnapshot = null;
+    document.documentElement.dataset.theme = this.db.settings.theme;
+    this.engine = new SessionEngine(systemClock, {
+      onSegmentFinished: (seg) => this.onSegmentFinished(seg),
+      onPhaseComplete: () => this.onPhaseComplete(undefined),
+      onWorkAbandoned: (ms) => this.recordPomodoro("workAbandoned", ms),
+      onCheckpoint: (snap) => {
+        this.db.engineSnapshot = snap;
+        this.saveSoon();
+      },
+      onStateChange: (st) => {
+        this.announceTransition(st);
+        this.notify();
+      },
+    });
+    this.idle = new IdleMonitor(systemClock, this.db.settings.idleThresholdMs, {
+      onIdleDetected: (payload) => {
+        this.idlePrompt = { kind: "idle", idleMs: payload.idleMs };
+        this.emit();
+      },
+    });
+    this.saveNow();
+    this.showBanner("Backup restored.");
     this.emit();
   }
 }

@@ -93,7 +93,7 @@ export function renderTimerCard(ui: UiContext): HTMLElement {
     card.append(h("div", { class: "recent-list" },
       h("span", { class: "faint" }, "Recent:"),
       ...app.recentPairs().map((r) =>
-        h("button", { onclick: () => { app.start(makeRef(app, r.projectId, r.taskId), app.pendingMode); } }, r.label)),
+        h("button", { onclick: () => { app.start(makeRef(app, r.projectId, r.taskId), app.pendingMode, app.pendingMode === "countdown" ? (app.pendingCountdownMin ?? 25) * 60_000 : undefined); } }, r.label)),
     ));
   }
   return card;
@@ -129,8 +129,8 @@ function startOrResume(ui: UiContext): void {
       openQuickSwitcher(ui);
       return;
     }
-    const countdown = snap.mode === "countdown" ? readCountdownMinutes(app) * 60_000 : undefined;
-    app.start({ projectId, taskId: snap.ref?.taskId ?? null, tagIds: [], billable: app.db.projects.find(p => p.id === projectId)?.billableByDefault ?? false }, app.pendingMode, countdown);
+    const countdownMs = app.pendingMode === "countdown" ? (app.pendingCountdownMin ?? 25) * 60_000 : undefined;
+    app.start({ projectId, taskId: snap.ref?.taskId ?? null, tagIds: [], billable: app.db.projects.find(p => p.id === projectId)?.billableByDefault ?? false }, app.pendingMode, countdownMs);
   }
   app.saveNow();
   app.emit();
@@ -138,10 +138,6 @@ function startOrResume(ui: UiContext): void {
 
 function pickFirstProject(app: UiContext["app"]): string | null {
   return app.db.projects.find((p) => !p.archived)?.id ?? null;
-}
-
-function readCountdownMinutes(app: UiContext["app"]): number {
-  return app.pendingCountdownMin ?? 25;
 }
 
 function countdownPicker(app: UiContext["app"]): HTMLElement {

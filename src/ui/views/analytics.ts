@@ -3,7 +3,7 @@ import type { UiContext } from "../main.js";
 import { dailyTotals, totalsByProject, totalsByTag, weekdayHourHeatmap } from "../../analytics/aggregate.js";
 import { averageSessionLengthMs, focusStreaks, pomodoroCompletion, weekOverWeekDeltaMs } from "../../analytics/metrics.js";
 import { goalProgress } from "../../analytics/goals.js";
-import { dayKeyOf, startOfDayWall, startOfWeek, addDays } from "../../analytics/time.js";
+import { dayKeyOf, startOfDayWall, startOfWeek, addDays, systemTzOffset } from "../../analytics/time.js";
 import { formatHM } from "../../core/duration.js";
 
 type Period = "week" | "last7" | "last28" | "month";
@@ -17,10 +17,10 @@ const PERIODS: [Period, string][] = [
 export function renderAnalytics(ui: UiContext): void {
   const { app, main } = ui;
   const period = (app.analyticsPeriod ?? "last7") as Period;
-  const tz = (w: number) => -new Date(w).getTimezoneOffset();
+  const tz = systemTzOffset;
   const today = app.dayKeyOf(app.now());
 
-  const dayKeys = dayKeysFor(period, today, tz, app.db.settings.weekStartsOn);
+  const dayKeys = dayKeysFor(period, today, tz, app.db.settings.weekStartsOn, app.now());
   const totals = dailyTotals(app.db, dayKeys, tz);
   const focusedTotal = totals.reduce((s, t) => s + t.focusedMs, 0);
   const billableTotal = totals.reduce((s, t) => s + t.billableFocusedMs, 0);
@@ -41,7 +41,7 @@ export function renderAnalytics(ui: UiContext): void {
   );
 }
 
-function dayKeysFor(period: Period, today: string, tz: (w: number) => number, weekStartsOn: 0 | 1): string[] {
+function dayKeysFor(period: Period, today: string, tz: (w: number) => number, weekStartsOn: 0 | 1, nowWall: number): string[] {
   if (period === "week") {
     const start = startOfWeek(today, weekStartsOn, tz);
     return rangeKeys(start, 7, tz);
@@ -49,7 +49,7 @@ function dayKeysFor(period: Period, today: string, tz: (w: number) => number, we
   if (period === "last7") return rangeKeys(addDays(today, -6, tz), 7, tz);
   if (period === "last28") return rangeKeys(addDays(today, -27, tz), 28, tz);
   const firstOfMonth = `${today.slice(0, 7)}-01`;
-  const count = new Date().getDate();
+  const count = new Date(nowWall).getDate();
   return rangeKeys(firstOfMonth, count, tz);
 }
 
@@ -94,31 +94,39 @@ function statCard(label: string, value: string, sub?: string): HTMLElement {
 function heatmapSection(ui: UiContext, dayKeys: string[], tz: (w: number) => number): HTMLElement {
   const { app } = ui;
   const { cells, occurrencesPerWeekday } = weekdayHourHeatmap(app.db, dayKeys, tz);
-  const grid = h("div", { class: "heatmap", role: "table", "aria-label": "Average focused minutes by weekday and hour" });
-  grid.append(h("span"));
+  const grid = h("div", { class: "heatmap", role: "grid", "aria-label": "Average focused minutes by weekday and hour" });
+  const headerRow = h("div", { role: "row" });
+  headerRow.append(h("span", { class: "hm-label" }));
   for (let hour = 0; hour < 24; hour += 3) {
-    grid.append(h("span", { class: "hm-label", style: `grid-column:${hour + 2}` }, `${String(hour).padStart(2, "0")}`));
+    headerRow.append(h("span", { class: "hm-label", style: `grid-column:${hour + 2}` }, `${String(hour).padStart(2, "0")}`));
   }
+  grid.append(headerRow);
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   cells.forEach((row, wd) => {
-    grid.append(h("span", { class: "hm-label" }, weekdays[wd]!));
+    const rowEl = h("div", { role: "row" });
+    rowEl.append(h("span", { class: "hm-label", role: "rowheader" }, weekdays[wd]!));
     row.forEach((avgMin, hour) => {
+      const hasData = occurrencesPerWeekday[wd]! > 0;
+      const isTrueZero = hasData && avgMin <= 0;
       const level =
-        occurrencesPerWeekday[wd] === 0 || avgMin <= 0 ? 0
+        !hasData || avgMin <= 0 ? 0
         : avgMin <= 10 ? 1
         : avgMin <= 25 ? 2
         : avgMin <= 45 ? 3
         : 4;
-      grid.append(h("div", {
-        class: "hm-cell",
+      const valueText = hasData ? `${Math.round(avgMin)} min average` : "no data";
+      rowEl.append(h("div", {
+        class: `hm-cell${isTrueZero ? " hm-zero" : ""}`,
         style: level > 0 ? `background:var(--chart-ramp-${level + 1})` : "",
-        title: `${weekdays[wd]} ${String(hour).padStart(2, "0")}:00 — ${occurrencesPerWeekday[wd] === 0 ? "no data" : `${Math.round(avgMin)} min average`}`,
-        role: "cell",
+        title: `${weekdays[wd]} ${String(hour).padStart(2, "0")}:00 — ${valueText}`,
+        role: "gridcell",
+        "aria-label": `${weekdays[wd]} ${String(hour).padStart(2, "0")}:00: ${valueText}`,
       }));
     });
+    grid.append(rowEl);
   });
   return section("When focus happens", grid,
-    h("p", { class: "faint" }, "Cell = average focused minutes in that weekday-hour across the period. Empty means no data, not zero."));
+    h("p", { class: "muted" }, "Cell = average focused minutes in that weekday-hour across the period. Outlined empty cells mean no data; dashed zero cells mean the days existed but no time was recorded in that hour."));
 }
 
 function weeklyCompareSection(ui: UiContext, today: string, tz: (w: number) => number): HTMLElement {

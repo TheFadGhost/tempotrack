@@ -77,14 +77,15 @@ export function renderSettings(ui: UiContext): void {
     weekSunday.addEventListener("change", () => { if (weekSunday.checked) { s.weekStartsOn = 0; save(); } });
 
     const dayBoxes = [1, 2, 3, 4, 5, 6, 0].map((d) => {
-      const cb = h("input", { type: "checkbox", value: String(d) }) as HTMLInputElement;
+      const cb = h("input", { type: "checkbox" }) as HTMLInputElement;
       cb.checked = s.workingDays.includes(d);
+      cb.setAttribute("aria-label", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d]!);
       cb.addEventListener("change", () => {
-        s.workingDays = [1, 2, 3, 4, 5, 6, 0].filter((x) =>
-          x === d ? cb.checked : [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-day]')].find((i) => i.value === String(x))!.checked);
+        s.workingDays = cb.checked
+          ? [...new Set([...s.workingDays, d])]
+          : s.workingDays.filter((x) => x !== d);
         save();
       });
-      cb.setAttribute("data-day", "");
       return h("span", { class: "row" }, cb, h("span", null, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]));
     });
 
@@ -166,12 +167,7 @@ export function renderSettings(ui: UiContext): void {
       if (!file) return;
       try {
         const restored = ctx.app.store.restoreFromExport(await file.text());
-        ctx.app.db = restored;
-        ctx.app.db.engineSnapshot = null;
-        document.documentElement.dataset.theme = ctx.app.db.settings.theme;
-        ctx.app.saveNow();
-        ctx.app.showBanner("Backup restored.");
-        ctx.app.emit();
+        ctx.app.restore(restored);
       } catch (err) {
         ctx.app.showError(String((err as Error).message));
       }
@@ -180,7 +176,7 @@ export function renderSettings(ui: UiContext): void {
       h("div", null,
         fileNote,
         h("div", { class: "row" },
-          h("button", { onclick: () => download(`tempotrack-backup-${new Date().toISOString().slice(0, 10)}.json`, () => JSON.stringify({ app: "tempotrack", exportedAtWall: Date.now(), database: ctx.app.db }, null, 2), "application/json") }, "Download backup"),
+          h("button", { onclick: () => download(`tempotrack-backup-${new Date().toISOString().slice(0, 10)}.json`, () => JSON.stringify({ app: "tempotrack", exportedAtWall: ctx.app.now(), database: ctx.app.db }, null, 2), "application/json") }, "Download backup"),
           h("button", { onclick: () => download(`tempotrack-export-${new Date().toISOString().slice(0, 10)}.json`, () => ctx.app.store.export(ctx.app.db, ctx.app.now()), "application/json") }, "Full export"),
           h("span", { class: "row" }, restoreInput),
         ),
@@ -189,11 +185,8 @@ export function renderSettings(ui: UiContext): void {
             onclick: () => {
               const sample = buildSampleDatabase(ctx.app.now()) as unknown as typeof ctx.app.db;
               sample.settings = ctx.app.db.settings;
-              ctx.app.db = sample;
-              document.documentElement.dataset.theme = ctx.app.db.settings.theme;
-              ctx.app.saveNow();
+              ctx.app.restore(sample);
               ctx.app.showBanner("Synthetic sample data loaded (fictional projects).");
-              ctx.app.emit();
             },
           }, "Load synthetic sample data"),
           h("button", {

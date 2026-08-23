@@ -4,6 +4,9 @@ import { findGaps, findOverlaps, spanOf } from "../../data/overlap.js";
 import { formatHM } from "../../core/duration.js";
 import { openEntryDialog, confirmDialog } from "../dialogs.js";
 import { splitEntry } from "../../data/model.js";
+import { billableMinorUnits, formatMinor } from "../../core/money.js";
+import { effectiveRate as billingEffectiveRate } from "../../analytics/billing.js";
+import { paletteForTheme, readableInkOn } from "../color.js";
 
 export function dayDetail(ui: UiContext, dayStartWall: number): HTMLElement {
   const { app } = ui;
@@ -142,20 +145,12 @@ function billableCell(ui: UiContext, entry: import("../../data/schema.js").Entry
   if (!entry.billable) return null;
   const rate = effectiveRateOf(app, entry.projectId);
   if (rate === null) return h("span", { class: "faint" }, "billable (no rate)");
-  const numerator = entry.durationMs * rate;
-  const q = Math.floor(numerator / 3_600_000);
-  const amountMinor = 2 * (numerator - q * 3_600_000) >= 3_600_000 ? q + 1 : q;
-  const major = `${Math.floor(amountMinor / 100)}.${String(amountMinor % 100).padStart(2, "0")}`;
-  return h("span", { class: "report-money" }, `${major} ${app.db.settings.currencyCode}`);
+  const amountMinor = billableMinorUnits(entry.durationMs, rate);
+  return h("span", { class: "report-money" }, `${formatMinor(amountMinor)} ${app.db.settings.currencyCode}`);
 }
 
 function effectiveRateOf(app: UiContext["app"], projectId: string): number | null {
-  let current = app.db.projects.find((p) => p.id === projectId) ?? null;
-  while (current) {
-    if (current.rateMinorPerHour !== null) return current.rateMinorPerHour;
-    current = current.parentId ? app.db.projects.find((p) => p.id === current!.parentId) ?? null : null;
-  }
-  return null;
+  return billingEffectiveRate(app.db, projectId);
 }
 
 function splitAtHalfway(ui: UiContext, entry: import("../../data/schema.js").Entry): void {
@@ -184,11 +179,17 @@ function resolveOverlap(ui: UiContext, aId: string, bId: string): void {
   }
   earlier.durationMs = newDur;
   earlier.editedAt = app.now();
-  earlier.revisions.push({ atWall: Date.now(), source: "overlapFix", fields: { durationMs: [earlierEnd - earlier.startedWall, newDur] } });
+  earlier.revisions.push({ atWall: app.now(), source: "overlapFix", fields: { durationMs: [earlierEnd - earlier.startedWall, newDur] } });
   earlier.acknowledgedOverlapsWith.push(later.id);
   later.acknowledgedOverlapsWith.push(earlier.id);
   app.saveSoon();
   app.emit();
+}
+
+function paletteHexFor(app: UiContext["app"], projectId: string): string {
+  const idx = app.db.projects.find((p) => p.id === projectId)?.colorIndex ?? 0;
+  const palette = paletteForTheme(document.documentElement.dataset.theme);
+  return palette[idx % palette.length]!;
 }
 
 export function computeLanes(entries: import("../../data/schema.js").Entry[]): { items: { entry: import("../../data/schema.js").Entry; lane: number }[]; laneCount: number } {

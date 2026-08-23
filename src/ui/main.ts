@@ -1,5 +1,5 @@
-import { App } from "./app.js";
-import { renderHeader } from "./views/header.js";
+import { App, clockText } from "./app.js";
+import { renderHeader, renderIndicator } from "./views/header.js";
 import { renderToday } from "./views/today.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderReports } from "./views/reports.js";
@@ -63,6 +63,24 @@ export function render(): void {
 
 window.addEventListener("hashchange", render);
 app.onChange(render);
+app.onTick(() => patchTick());
+
+function patchTick(): void {
+  const display = document.getElementById("timer-display");
+  if (display) {
+    const st = app.engine.publicState();
+    const snap = app.engine.snapshot();
+    const showRemaining = snap.mode !== "stopwatch" && snap.phaseTargetMs !== null && st.status !== "idle";
+    display.textContent = clockText(showRemaining ? st.remainingMs : st.elapsedMs);
+    const fill = display.parentElement?.querySelector<HTMLElement>(".progress-fill");
+    if (fill && st.progress01 !== null) fill.style.width = `${(st.progress01 * 100).toFixed(2)}%`;
+  }
+  updateIndicatorOnly();
+}
+
+function updateIndicatorOnly(): void {
+  renderIndicator({ indicator, app } as unknown as Parameters<typeof renderIndicator>[0]);
+}
 
 installKeyboard(app, modal, render, navigate);
 wireActivityListeners(app);

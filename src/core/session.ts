@@ -271,10 +271,15 @@ export class SessionEngine {
    * Resolves an idle-detected stretch that happened while running.
    * `keep`: count the whole stretch. `discard`: remove idleMs from the
    * segment. `stop`: finalize the shortened segment and go idle.
+   * Refuses while an away-time reconciliation is pending: that decision owns
+   * the contested span, and mixing both would silently decide one of them.
    */
   resolveIdleStretch(idleMs: number, action: "keep" | "discard" | "stop"): FinalizedSegment | null {
     const s = this.snap;
     if (s.status !== "running") throw new Error(`Cannot resolve idle from status "${s.status}"`);
+    if (this.publicState().status === "needsReconciliation") {
+      throw new Error("Resolve the away-time prompt first.");
+    }
     let seg: FinalizedSegment | null = null;
     const st = this.publicState();
     if (action === "keep") {
@@ -291,7 +296,6 @@ export class SessionEngine {
     } else {
       this.stampNewSegment();
     }
-    s.status = s.status === "running" ? "running" : s.status;
     this.emitChange();
     return seg;
   }
@@ -300,6 +304,9 @@ export class SessionEngine {
   reassignAfterIdle(ref: SessionRef, idleMs: number): void {
     const s = this.snap;
     if (s.status !== "running") throw new Error(`Cannot reassign from status "${s.status}"`);
+    if (this.publicState().status === "needsReconciliation") {
+      throw new Error("Resolve the away-time prompt first.");
+    }
     const st = this.publicState();
     const shortened = Math.max(0, st.elapsedMs - Math.max(0, idleMs));
     s.accumulatedMs = shortened;
@@ -353,12 +360,6 @@ export class SessionEngine {
     return seg;
   }
 
-  setCountdown(countdownMs: number): void {
-    if (!Number.isSafeInteger(countdownMs) || countdownMs <= 0) throw new Error("countdown must be positive ms");
-    this.snap.mode = "countdown";
-    this.snap.phaseTargetMs = countdownMs;
-    this.emitChange();
-  }
 
   applySnapshot(restored: EngineSnapshot): void {
     this.snap = structuredClone(restored);

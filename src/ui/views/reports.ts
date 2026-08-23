@@ -1,6 +1,8 @@
 import { h } from "../dom.js";
 import type { UiContext } from "../main.js";
 import { entriesToCsv } from "../../export/csv.js";
+import { coveredUnionMs } from "../../analytics/aggregate.js";
+import { systemTzOffset } from "../../analytics/time.js";
 import { buildInvoiceModel, renderInvoiceHtml, type GroupBy } from "../../export/invoice.js";
 import { formatHM } from "../../core/duration.js";
 
@@ -63,7 +65,7 @@ export function renderReports(ui: UiContext): void {
       h("thead", null, h("tr", null,
         h("th", null, `By ${groupSelect.value}`),
         h("th", { class: "n" }, "Time (h:mm)"),
-        h("th", { class: "n" }, "Billable hours"),
+        h("th", { class: "n" }, "Billable (h:mm)"),
         h("th", { class: "n" }, `Amount (${app.db.settings.currencyCode})`))),
       h("tbody", null,
         ...(model.lines.length === 0
@@ -89,7 +91,7 @@ export function renderReports(ui: UiContext): void {
     out.append(
       h("div", { class: "row", style: "margin-top: var(--space-4)" },
         h("button", {
-          onclick: () => download(`tempotrack-entries-${fromInput.value}-to-${toInput.value}.csv`, entriesToCsv(app.db, entries), "text/csv"),
+          onclick: () => download(`tempotrack-entries-${fromInput.value}-to-${toInput.value}.csv`, entriesToCsv(app.db, entries, systemTzOffset), "text/csv"),
         }, "Download CSV"),
         h("button", {
           onclick: () => download(`tempotrack-report-${fromInput.value}.json`, app.store.export(app.db, app.now()), "application/json"),
