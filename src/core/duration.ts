@@ -45,9 +45,6 @@ export function parseHM(input: string): number {
   }
   const h = Number(match[1]);
   const m = Number(match[2]);
-  if (match[2]!.length === 1 && !input.includes(":")) {
-    // "1,5" style decimals are deliberately not supported to keep one format.
-  }
   if (m >= 60) throw new Error(`Minutes must be below 60 — got "${input}"`);
   return h * MS_PER_HOUR + m * MS_PER_MINUTE;
 }

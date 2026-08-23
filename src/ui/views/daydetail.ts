@@ -40,9 +40,10 @@ export function dayDetail(ui: UiContext, dayStartWall: number): HTMLElement {
     const bottom = (Math.min(endMin, spanEnd) - spanStart) / (spanEnd - spanStart) * 100;
     const height = Math.max(0.8, bottom - top);
     const label = entry.durationMs >= 30 * 60_000 ? `${app.projectName(entry.projectId)} ${formatHM(entry.durationMs)}` : "";
+    const fillHex = paletteHexFor(app, entry.projectId);
     timeline.append(h("div", {
       class: "entry-block",
-      style: `top:${top}%;height:${height}%;left:${8 + lane * laneWidth}%;width:calc(${laneWidth}% - 10px);background:${app.colorOf(entry.projectId)}`,
+      style: `top:${top}%;height:${height}%;left:${8 + lane * laneWidth}%;width:calc(${laneWidth}% - 10px);background:${fillHex};color:${readableInkOn(fillHex)}`,
       title: `${timeLabel(entry.startedWall)}–${timeLabel(entry.startedWall + entry.durationMs)} · ${app.projectName(entry.projectId)}${entry.note ? " · " + entry.note : ""}`,
     }, label));
   }

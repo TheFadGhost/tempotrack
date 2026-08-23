@@ -83,7 +83,11 @@ export function renderReports(ui: UiContext): void {
         h("td", { class: "n report-money" }, minorToStr(model.totalAmountMinor)))));
 
     const overlapsNote = hasOverlaps(entries)
-      ? h("p", { class: "muted" }, "Note: this range contains overlapping entries; their time is counted in each entry.")
+      ? h(
+          "p",
+          { class: "muted num" },
+          `Contains overlapping entries. Gross time ${formatHM(totalMs)}; net covered time ${formatHM(coveredUnionMs(entries))}.`,
+        )
       : null;
 
     out.append(table);

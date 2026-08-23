@@ -168,6 +168,7 @@ describe("SessionEngine timing correctness", () => {
     clock.suspend(3_600_000);
     expect(engine.evaluate().status).toBe("needsReconciliation");
     expect(() => engine.resolveIdleStretch(30_000, "keep")).toThrow(/away-time/i);
+    expect(() => engine.reassignAfterIdle(REF, 30_000)).toThrow(/away-time/i);
     // Reconciliation still resolves normally afterwards.
     engine.resolveReconciliation("discardAbsent");
     clock.advance(5_000);
